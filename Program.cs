@@ -1,4 +1,7 @@
+using _1_the_real_time_polling_app_focus_signalr_websockets.Dtos;
+using _1_the_real_time_polling_app_focus_signalr_websockets.Models;
 using _1_the_real_time_polling_app_focus_signalr_websockets.Repositories;
+using _1_the_real_time_polling_app_focus_signalr_websockets.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +11,9 @@ builder.Services.AddOpenApi();
 
 // Register the in-memory poll repository as singleton for thread-safe shared state
 builder.Services.AddSingleton<IPollRepository, InMemoryPollRepository>();
+
+// Register the room code generator
+builder.Services.AddSingleton<IRoomCodeGenerator, RoomCodeGenerator>();
 
 var app = builder.Build();
 
@@ -19,28 +25,79 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
+// POST /api/polls - Create a new poll
+app.MapPost("/api/polls", (CreatePollRequest request, IPollRepository repository, IRoomCodeGenerator codeGenerator) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    // Validate request
+    var validationErrors = new List<string>();
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    if (string.IsNullOrWhiteSpace(request.Question))
+    {
+        validationErrors.Add("Question is required");
+    }
+
+    if (request.Options == null || request.Options.Count < 2)
+    {
+        validationErrors.Add("At least 2 options are required");
+    }
+    else if (request.Options.Count > 4)
+    {
+        validationErrors.Add("Maximum 4 options are allowed");
+    }
+    else
+    {
+        // Check for empty option texts
+        for (int i = 0; i < request.Options.Count; i++)
+        {
+            if (string.IsNullOrWhiteSpace(request.Options[i]))
+            {
+                validationErrors.Add($"Option {i + 1} text cannot be empty");
+            }
+        }
+    }
+
+    if (validationErrors.Any())
+    {
+        return Results.BadRequest(new { errors = validationErrors });
+    }
+
+    // Generate unique room code
+    var roomCode = codeGenerator.GenerateUniqueCode();
+
+    // Create poll
+    var poll = new Poll
+    {
+        Question = request.Question.Trim(),
+        RoomCode = roomCode,
+        Options = request.Options!.Select(optionText => new PollOption
+        {
+            Text = optionText.Trim()
+        }).ToList()
+    };
+
+    var createdPoll = repository.CreatePoll(poll);
+
+    // Build response
+    var response = new CreatePollResponse
+    {
+        Id = createdPoll.Id,
+        RoomCode = createdPoll.RoomCode,
+        Question = createdPoll.Question,
+        CreatedAt = createdPoll.CreatedAt,
+        Options = createdPoll.Options.Select(o => new PollOptionResponse
+        {
+            Id = o.Id,
+            Text = o.Text,
+            VoteCount = o.VoteCount
+        }).ToList()
+    };
+
+    return Results.Created($"/api/polls/{createdPoll.RoomCode}", response);
 })
-.WithName("GetWeatherForecast");
+.WithName("CreatePoll")
+.WithDescription("Create a new poll with a question and 2-4 options");
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+// Make Program class accessible for integration tests
+public partial class Program { }
