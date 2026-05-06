@@ -40,6 +40,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseStaticFiles();
+
 app.UseCors("SignalRCors");
 
 app.MapHub<PollHub>("/hubs/poll");

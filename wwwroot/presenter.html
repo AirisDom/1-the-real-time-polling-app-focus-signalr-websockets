@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Poll - Presenter View</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .options-container {
+            margin-bottom: 20px;
+        }
+
+        .options-container h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+
+        .option-input {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .option-input span {
+            width: 30px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .option-input input {
+            flex: 1;
+        }
+
+        .option-input .remove-btn {
+            margin-left: 10px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .option-input .remove-btn:hover {
+            background: #ff3344;
+        }
+
+        .option-input .remove-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .add-option-btn {
+            background: #f0f0f0;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            width: 100%;
+            cursor: pointer;
+            color: #666;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .add-option-btn:hover:not(:disabled) {
+            background: #e8e8e8;
+            border-color: #999;
+        }
+
+        .add-option-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            background: #fff3f3;
+            border: 1px solid #ffcccc;
+            color: #cc0000;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-container {
+            display: none;
+            text-align: center;
+        }
+
+        .room-code-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .room-code-display h2 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .room-code {
+            font-size: 4rem;
+            font-weight: 700;
+            letter-spacing: 8px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .poll-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .poll-info h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .poll-info ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .poll-info li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            color: #555;
+        }
+
+        .poll-info li:last-child {
+            border-bottom: none;
+        }
+
+        .action-links {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .action-link {
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .action-link.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .action-link.secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .action-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .new-poll-btn {
+            background: #f0f0f0;
+            color: #333;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .new-poll-btn:hover {
+            background: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Create a New Poll</h1>
+
+        <div class="card">
+            <div id="form-container">
+                <div id="error-message" class="error-message"></div>
+
+                <form id="poll-form">
+                    <div class="form-group">
+                        <label for="question">Your Question</label>
+                        <input type="text" id="question" name="question" placeholder="What would you like to ask?" required maxlength="500">
+                    </div>
+
+                    <div class="options-container">
+                        <h3>Answer Options (2-4 options)</h3>
+                        <div id="options-list">
+                            <div class="option-input">
+                                <span>1.</span>
+                                <input type="text" name="option" placeholder="Option 1" required maxlength="200">
+                                <button type="button" class="remove-btn" disabled>&times;</button>
+                            </div>
+                            <div class="option-input">
+                                <span>2.</span>
+                                <input type="text" name="option" placeholder="Option 2" required maxlength="200">
+                                <button type="button" class="remove-btn" disabled>&times;</button>
+                            </div>
+                        </div>
+                        <button type="button" id="add-option-btn" class="add-option-btn">+ Add Another Option</button>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="submit-btn">Create Poll</button>
+                </form>
+            </div>
+
+            <div id="success-container" class="success-container">
+                <div class="room-code-display">
+                    <h2>Share this code with your audience</h2>
+                    <div id="room-code" class="room-code"></div>
+                </div>
+
+                <div class="poll-info">
+                    <h3 id="created-question"></h3>
+                    <ul id="created-options"></ul>
+                </div>
+
+                <div class="action-links">
+                    <button type="button" class="new-poll-btn" id="new-poll-btn">Create Another Poll</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('poll-form');
+        const optionsList = document.getElementById('options-list');
+        const addOptionBtn = document.getElementById('add-option-btn');
+        const submitBtn = document.getElementById('submit-btn');
+        const errorMessage = document.getElementById('error-message');
+        const formContainer = document.getElementById('form-container');
+        const successContainer = document.getElementById('success-container');
+        const newPollBtn = document.getElementById('new-poll-btn');
+
+        function getOptionCount() {
+            return optionsList.querySelectorAll('.option-input').length;
+        }
+
+        function updateRemoveButtons() {
+            const removeButtons = optionsList.querySelectorAll('.remove-btn');
+            const count = getOptionCount();
+            removeButtons.forEach(btn => {
+                btn.disabled = count <= 2;
+            });
+        }
+
+        function updateAddButton() {
+            addOptionBtn.disabled = getOptionCount() >= 4;
+        }
+
+        function renumberOptions() {
+            const options = optionsList.querySelectorAll('.option-input');
+            options.forEach((opt, index) => {
+                opt.querySelector('span').textContent = `${index + 1}.`;
+                opt.querySelector('input').placeholder = `Option ${index + 1}`;
+            });
+        }
+
+        addOptionBtn.addEventListener('click', () => {
+            if (getOptionCount() >= 4) return;
+
+            const count = getOptionCount() + 1;
+            const div = document.createElement('div');
+            div.className = 'option-input';
+            div.innerHTML = `
+                <span>${count}.</span>
+                <input type="text" name="option" placeholder="Option ${count}" required maxlength="200">
+                <button type="button" class="remove-btn">&times;</button>
+            `;
+            optionsList.appendChild(div);
+
+            div.querySelector('.remove-btn').addEventListener('click', () => {
+                div.remove();
+                renumberOptions();
+                updateRemoveButtons();
+                updateAddButton();
+            });
+
+            updateRemoveButtons();
+            updateAddButton();
+            div.querySelector('input').focus();
+        });
+
+        optionsList.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.closest('.option-input').remove();
+                renumberOptions();
+                updateRemoveButtons();
+                updateAddButton();
+            });
+        });
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        function showSuccess(data) {
+            document.getElementById('room-code').textContent = data.roomCode;
+            document.getElementById('created-question').textContent = data.question;
+
+            const optionsList = document.getElementById('created-options');
+            optionsList.innerHTML = '';
+            data.options.forEach(opt => {
+                const li = document.createElement('li');
+                li.textContent = opt.text;
+                optionsList.appendChild(li);
+            });
+
+            formContainer.style.display = 'none';
+            successContainer.style.display = 'block';
+        }
+
+        function resetForm() {
+            form.reset();
+            while (getOptionCount() > 2) {
+                optionsList.lastElementChild.remove();
+            }
+            renumberOptions();
+            updateRemoveButtons();
+            updateAddButton();
+            hideError();
+            formContainer.style.display = 'block';
+            successContainer.style.display = 'none';
+        }
+
+        newPollBtn.addEventListener('click', resetForm);
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideError();
+
+            const question = document.getElementById('question').value.trim();
+            const optionInputs = optionsList.querySelectorAll('input[name="option"]');
+            const options = Array.from(optionInputs).map(input => input.value.trim());
+
+            if (!question) {
+                showError('Please enter a question');
+                return;
+            }
+
+            if (options.some(opt => !opt)) {
+                showError('Please fill in all option fields');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating...';
+
+            try {
+                const response = await fetch('/api/polls', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        options: options
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    const errorMsg = data.errors ? data.errors.join(', ') : 'Failed to create poll';
+                    showError(errorMsg);
+                    return;
+                }
+
+                showSuccess(data);
+            } catch (error) {
+                showError('Network error. Please try again.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Poll';
+            }
+        });
+    </script>
+</body>
+</html>
