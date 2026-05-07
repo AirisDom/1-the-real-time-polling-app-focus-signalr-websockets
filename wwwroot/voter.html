@@ -3,8 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vote - Real-Time Polling</title>
+    <meta name="description" content="Enter a room code to vote in an existing poll.">
+    <title>Join Poll - Real-Time Polling</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <style>
+        :root {
+            --primary-start: #667eea;
+            --primary-end: #764ba2;
+            --success-start: #2ecc71;
+            --success-end: #27ae60;
+            --warning-start: #f39c12;
+            --warning-end: #e67e22;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -13,285 +24,16 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
             min-height: 100vh;
-            padding: 40px 20px;
-        }
-
-        .container {
-            max-width: 500px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            color: white;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2rem;
-        }
-
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #333;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 24px;
-            text-align: center;
-            letter-spacing: 8px;
-            font-family: 'Courier New', monospace;
-            text-transform: uppercase;
-            transition: border-color 0.2s;
-        }
-
-        input[type="text"]:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        input[type="text"]::placeholder {
-            letter-spacing: 4px;
-            font-size: 16px;
-        }
-
-        .join-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .join-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .join-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 0.8s linear infinite;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-
-        .loading-spinner.dark {
-            border-color: rgba(0, 0, 0, 0.1);
-            border-top-color: #667eea;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .error-message {
-            background: #fff3f3;
-            border: 1px solid #ffcccc;
-            color: #cc0000;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .poll-container {
-            display: none;
-        }
-
-        .poll-question {
-            font-size: 1.5rem;
-            color: #333;
-            text-align: center;
-            margin-bottom: 25px;
-            line-height: 1.4;
-        }
-
-        .room-code-badge {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-family: 'Courier New', monospace;
-            font-weight: 700;
-            letter-spacing: 4px;
-            display: inline-block;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-        }
-
-        .options-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .option-btn {
-            width: 100%;
-            padding: 18px 20px;
-            background: #f8f9fa;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            color: #333;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: left;
-            font-weight: 500;
-        }
-
-        .option-btn:hover {
-            background: #667eea;
-            border-color: #667eea;
-            color: white;
-            transform: translateX(4px);
-        }
-
-        .option-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .confirmation-container {
-            display: none;
-            text-align: center;
-        }
-
-        .success-icon {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-        }
-
-        .success-icon svg {
-            width: 40px;
-            height: 40px;
-            fill: white;
-        }
-
-        .confirmation-title {
-            font-size: 1.5rem;
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .confirmation-text {
-            color: #666;
-            margin-bottom: 25px;
-        }
-
-        .voted-option {
-            background: #f8f9fa;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .vote-again-btn {
-            background: #f0f0f0;
-            color: #333;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .vote-again-btn:hover {
-            background: #e0e0e0;
-        }
-
-        .already-voted-container {
-            display: none;
-            text-align: center;
-        }
-
-        .already-voted-icon {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-        }
-
-        .already-voted-icon svg {
-            width: 40px;
-            height: 40px;
-            fill: white;
-        }
-
-        .already-voted-title {
-            font-size: 1.5rem;
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .already-voted-text {
-            color: #666;
-            margin-bottom: 25px;
-        }
-
-        .back-link {
-            display: block;
-            text-align: center;
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            margin-top: 20px;
-            font-size: 14px;
-        }
-
-        .back-link:hover {
-            color: white;
+            padding: 70px 1.25rem 2.5rem;
         }
 
         .nav {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
-            padding: 15px 20px;
+            -webkit-backdrop-filter: blur(10px);
+            padding: 1rem 1.25rem;
             position: fixed;
             top: 0;
             left: 0;
@@ -316,7 +58,7 @@
 
         .nav-links {
             display: flex;
-            gap: 20px;
+            gap: 1.25rem;
         }
 
         .nav-link {
@@ -324,6 +66,7 @@
             text-decoration: none;
             font-weight: 500;
             transition: color 0.2s;
+            padding-bottom: 2px;
         }
 
         .nav-link:hover {
@@ -333,11 +76,258 @@
         .nav-link.active {
             color: white;
             border-bottom: 2px solid white;
-            padding-bottom: 2px;
         }
 
-        body {
-            padding-top: 70px;
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 1.875rem;
+            font-size: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.875rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1.5rem;
+            text-align: center;
+            letter-spacing: 8px;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-start);
+        }
+
+        input[type="text"]::placeholder {
+            letter-spacing: 4px;
+            font-size: 1rem;
+        }
+
+        .join-btn {
+            width: 100%;
+            padding: 0.875rem;
+            background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+        }
+
+        .join-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .join-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.5rem;
+            vertical-align: middle;
+        }
+
+        .loading-spinner.dark {
+            border-color: rgba(0, 0, 0, 0.1);
+            border-top-color: var(--primary-start);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #fff3f3;
+            border: 1px solid #ffcccc;
+            color: #cc0000;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1.25rem;
+            display: none;
+        }
+
+        .poll-container {
+            display: none;
+        }
+
+        .poll-question {
+            font-size: 1.5rem;
+            color: #333;
+            text-align: center;
+            margin-bottom: 1.5625rem;
+            line-height: 1.4;
+        }
+
+        .room-code-badge {
+            background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            letter-spacing: 4px;
+            display: inline-block;
+            margin-bottom: 1.25rem;
+            font-size: 0.9rem;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .option-btn {
+            width: 100%;
+            padding: 1.125rem 1.25rem;
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            font-weight: 500;
+            font-family: inherit;
+        }
+
+        .option-btn:hover {
+            background: var(--primary-start);
+            border-color: var(--primary-start);
+            color: white;
+            transform: translateX(4px);
+        }
+
+        .option-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .confirmation-container,
+        .already-voted-container {
+            display: none;
+            text-align: center;
+        }
+
+        .success-icon,
+        .already-voted-icon {
+            width: 5rem;
+            height: 5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+        }
+
+        .success-icon {
+            background: linear-gradient(135deg, var(--success-start) 0%, var(--success-end) 100%);
+        }
+
+        .already-voted-icon {
+            background: linear-gradient(135deg, var(--warning-start) 0%, var(--warning-end) 100%);
+        }
+
+        .success-icon svg,
+        .already-voted-icon svg {
+            width: 2.5rem;
+            height: 2.5rem;
+            fill: white;
+        }
+
+        .confirmation-title,
+        .already-voted-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 0.625rem;
+        }
+
+        .confirmation-text,
+        .already-voted-text {
+            color: #666;
+            margin-bottom: 1.5625rem;
+        }
+
+        .voted-option {
+            background: #f8f9fa;
+            padding: 0.9375rem 1.25rem;
+            border-radius: 8px;
+            margin-bottom: 1.25rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .vote-again-btn {
+            background: #f0f0f0;
+            color: #333;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .vote-again-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            margin-top: 1.25rem;
+            font-size: 0.875rem;
+        }
+
+        .back-link:hover {
+            color: white;
         }
 
         @media (max-width: 600px) {
@@ -346,11 +336,20 @@
             }
 
             .nav-links {
-                gap: 15px;
+                gap: 1rem;
             }
 
             .nav-link {
                 font-size: 0.9rem;
+            }
+
+            h1 {
+                font-size: 1.75rem;
+            }
+
+            input[type="text"] {
+                font-size: 1.25rem;
+                letter-spacing: 6px;
             }
         }
     </style>
@@ -415,7 +414,7 @@
             </div>
         </div>
 
-        <a href="presenter.html" class="back-link">Create your own poll →</a>
+        <a href="presenter.html" class="back-link">Create your own poll &rarr;</a>
     </div>
 
     <script>

@@ -8,16 +8,9 @@ using Microsoft.AspNetCore.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-
-// Register the in-memory poll repository as singleton for thread-safe shared state
 builder.Services.AddSingleton<IPollRepository, InMemoryPollRepository>();
-
-// Register the room code generator
 builder.Services.AddSingleton<IRoomCodeGenerator, RoomCodeGenerator>();
-
 builder.Services.AddSignalR();
 
 builder.Services.AddCors(options =>
@@ -35,7 +28,6 @@ var app = builder.Build();
 
 app.UseGlobalExceptionHandler();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -50,10 +42,8 @@ app.UseCors("SignalRCors");
 
 app.MapHub<PollHub>("/hubs/poll");
 
-// POST /api/polls - Create a new poll
 app.MapPost("/api/polls", (CreatePollRequest request, IPollRepository repository, IRoomCodeGenerator codeGenerator) =>
 {
-    // Validate request
     var validationErrors = new List<string>();
 
     if (string.IsNullOrWhiteSpace(request.Question))
@@ -71,7 +61,6 @@ app.MapPost("/api/polls", (CreatePollRequest request, IPollRepository repository
     }
     else
     {
-        // Check for empty option texts
         for (int i = 0; i < request.Options.Count; i++)
         {
             if (string.IsNullOrWhiteSpace(request.Options[i]))
@@ -86,10 +75,7 @@ app.MapPost("/api/polls", (CreatePollRequest request, IPollRepository repository
         return Results.BadRequest(new { errors = validationErrors });
     }
 
-    // Generate unique room code
     var roomCode = codeGenerator.GenerateUniqueCode();
-
-    // Create poll
     var poll = new Poll
     {
         Question = request.Question.Trim(),
@@ -101,8 +87,6 @@ app.MapPost("/api/polls", (CreatePollRequest request, IPollRepository repository
     };
 
     var createdPoll = repository.CreatePoll(poll);
-
-    // Build response
     var response = new CreatePollResponse
     {
         Id = createdPoll.Id,
@@ -122,7 +106,6 @@ app.MapPost("/api/polls", (CreatePollRequest request, IPollRepository repository
 .WithName("CreatePoll")
 .WithDescription("Create a new poll with a question and 2-4 options");
 
-// GET /api/polls/{roomCode} - Get poll for voters (without vote counts)
 app.MapGet("/api/polls/{roomCode}", (string roomCode, IPollRepository repository) =>
 {
     var poll = repository.GetByRoomCode(roomCode);
@@ -148,7 +131,6 @@ app.MapGet("/api/polls/{roomCode}", (string roomCode, IPollRepository repository
 .WithName("GetPoll")
 .WithDescription("Get a poll by room code for voters");
 
-// POST /api/polls/{roomCode}/vote - Cast a vote
 app.MapPost("/api/polls/{roomCode}/vote", async (string roomCode, VoteRequest request, IPollRepository repository, IHubContext<PollHub> hubContext) =>
 {
     var poll = repository.GetByRoomCode(roomCode);
@@ -198,7 +180,6 @@ app.MapPost("/api/polls/{roomCode}/vote", async (string roomCode, VoteRequest re
 .WithName("CastVote")
 .WithDescription("Cast a vote for a poll option");
 
-// POST /api/polls/{roomCode}/close - Close a poll
 app.MapPost("/api/polls/{roomCode}/close", async (string roomCode, IPollRepository repository, IHubContext<PollHub> hubContext) =>
 {
     var poll = repository.GetByRoomCode(roomCode);
@@ -227,5 +208,4 @@ app.MapPost("/api/polls/{roomCode}/close", async (string roomCode, IPollReposito
 
 app.Run();
 
-// Make Program class accessible for integration tests
 public partial class Program { }
