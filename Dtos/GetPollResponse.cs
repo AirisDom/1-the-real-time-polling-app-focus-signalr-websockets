@@ -4,6 +4,7 @@ public class GetPollResponse
 {
     public string Question { get; set; } = string.Empty;
     public string RoomCode { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
     public List<VoterPollOptionResponse> Options { get; set; } = new();
 }
 

@@ -38,4 +38,6 @@ public interface IPollRepository
     /// <param name="roomCode">The room code of the poll.</param>
     /// <returns>A dictionary mapping option IDs to their vote counts, or null if poll not found.</returns>
     Dictionary<int, int>? GetResults(string roomCode);
+
+    bool ClosePoll(string roomCode);
 }

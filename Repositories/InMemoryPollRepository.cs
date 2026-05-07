@@ -97,4 +97,15 @@ public class InMemoryPollRepository : IPollRepository
 
         return poll.Options.ToDictionary(o => o.Id, o => o.VoteCount);
     }
+
+    public bool ClosePoll(string roomCode)
+    {
+        if (!_polls.TryGetValue(roomCode, out var poll))
+        {
+            return false;
+        }
+
+        poll.IsActive = false;
+        return true;
+    }
 }

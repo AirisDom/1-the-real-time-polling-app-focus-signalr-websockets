@@ -131,6 +131,7 @@ app.MapGet("/api/polls/{roomCode}", (string roomCode, IPollRepository repository
     {
         Question = poll.Question,
         RoomCode = poll.RoomCode,
+        IsActive = poll.IsActive,
         Options = poll.Options.Select(o => new VoterPollOptionResponse
         {
             Id = o.Id,
@@ -150,6 +151,11 @@ app.MapPost("/api/polls/{roomCode}/vote", async (string roomCode, VoteRequest re
     if (poll == null)
     {
         return Results.NotFound(new { error = "Poll not found" });
+    }
+
+    if (!poll.IsActive)
+    {
+        return Results.StatusCode(410);
     }
 
     var option = poll.Options.FirstOrDefault(o => o.Id == request.OptionId);
@@ -187,6 +193,33 @@ app.MapPost("/api/polls/{roomCode}/vote", async (string roomCode, VoteRequest re
 })
 .WithName("CastVote")
 .WithDescription("Cast a vote for a poll option");
+
+// POST /api/polls/{roomCode}/close - Close a poll
+app.MapPost("/api/polls/{roomCode}/close", async (string roomCode, IPollRepository repository, IHubContext<PollHub> hubContext) =>
+{
+    var poll = repository.GetByRoomCode(roomCode);
+    if (poll == null)
+    {
+        return Results.NotFound(new { error = "Poll not found" });
+    }
+
+    if (!poll.IsActive)
+    {
+        return Results.Ok(new { message = "Poll is already closed" });
+    }
+
+    var success = repository.ClosePoll(roomCode);
+    if (!success)
+    {
+        return Results.BadRequest(new { error = "Unable to close poll" });
+    }
+
+    await hubContext.Clients.Group(roomCode).SendAsync("PollClosed", new { roomCode });
+
+    return Results.Ok(new { message = "Poll closed successfully" });
+})
+.WithName("ClosePoll")
+.WithDescription("Close a poll to prevent further voting");
 
 app.Run();
 

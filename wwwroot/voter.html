@@ -455,6 +455,8 @@
                         showJoinForm();
                     } else if (response.status === 409) {
                         showAlreadyVoted();
+                    } else if (response.status === 410) {
+                        showError('This poll has been closed and is no longer accepting votes.');
                     } else {
                         showError(data.error || 'Unable to submit vote. Please try again.');
                     }

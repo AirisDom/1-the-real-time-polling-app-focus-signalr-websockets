@@ -236,6 +236,22 @@
             text-align: center;
             margin-bottom: 25px;
         }
+
+        .poll-closed-banner {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: none;
+        }
+
+        .poll-closed-banner.visible {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -258,6 +274,8 @@
             </div>
 
             <div id="results-section" style="display: none;">
+                <div id="poll-closed-banner" class="poll-closed-banner">Poll Closed - Voting has ended</div>
+
                 <div class="connection-status">
                     <div id="status-indicator" class="status-indicator connecting"></div>
                     <span id="status-text">Connecting...</span>
@@ -289,6 +307,7 @@
         let connection = null;
         let currentPoll = null;
         let currentResults = [];
+        let isPollClosed = false;
 
         function getRoomCodeFromUrl() {
             const params = new URLSearchParams(window.location.search);
@@ -321,6 +340,11 @@
                     statusText.textContent = 'Disconnected';
                     break;
             }
+        }
+
+        function showPollClosed() {
+            isPollClosed = true;
+            document.getElementById('poll-closed-banner').classList.add('visible');
         }
 
         function calculatePercentage(votes, total) {
@@ -391,6 +415,12 @@
                 }
             });
 
+            connection.on('PollClosed', (payload) => {
+                if (payload.roomCode === roomCode) {
+                    showPollClosed();
+                }
+            });
+
             connection.onreconnecting(() => {
                 updateConnectionStatus('connecting');
             });
@@ -439,6 +469,10 @@
             renderResults(initialResults);
 
             showResults();
+
+            if (!poll.isActive) {
+                showPollClosed();
+            }
 
             await initializeSignalR(roomCode);
         }
