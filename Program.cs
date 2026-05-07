@@ -1,5 +1,6 @@
 using _1_the_real_time_polling_app_focus_signalr_websockets.Dtos;
 using _1_the_real_time_polling_app_focus_signalr_websockets.Hubs;
+using _1_the_real_time_polling_app_focus_signalr_websockets.Middleware;
 using _1_the_real_time_polling_app_focus_signalr_websockets.Models;
 using _1_the_real_time_polling_app_focus_signalr_websockets.Repositories;
 using _1_the_real_time_polling_app_focus_signalr_websockets.Services;
@@ -31,6 +32,8 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+app.UseGlobalExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

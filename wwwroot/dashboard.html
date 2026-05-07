@@ -76,9 +76,76 @@
             background: #e74c3c;
         }
 
+        .status-indicator.reconnecting {
+            background: #f39c12;
+            animation: pulse 1s infinite;
+        }
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
+        }
+
+        .reconnect-banner {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 15px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .reconnect-banner.visible {
+            display: flex;
+        }
+
+        .reconnect-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .disconnected-banner {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 15px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .disconnected-banner.visible {
+            display: flex;
+        }
+
+        .retry-btn {
+            background: white;
+            color: #e74c3c;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .retry-btn:hover {
+            background: #f8f8f8;
         }
 
         .room-code-badge {
@@ -426,6 +493,16 @@
             <div id="results-section" style="display: none;">
                 <div id="poll-closed-banner" class="poll-closed-banner">Poll Closed - Voting has ended</div>
 
+                <div id="reconnect-banner" class="reconnect-banner">
+                    <span class="reconnect-spinner"></span>
+                    <span>Reconnecting to server...</span>
+                </div>
+
+                <div id="disconnected-banner" class="disconnected-banner">
+                    <span>Connection lost</span>
+                    <button id="retry-btn" class="retry-btn">Retry</button>
+                </div>
+
                 <div class="connection-status">
                     <div id="status-indicator" class="status-indicator connecting"></div>
                     <span id="status-text">Connecting...</span>
@@ -477,20 +554,50 @@
             resultsSection.style.display = 'block';
         }
 
+        const reconnectBanner = document.getElementById('reconnect-banner');
+        const disconnectedBanner = document.getElementById('disconnected-banner');
+        let currentRoomCode = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+
         function updateConnectionStatus(status) {
             statusIndicator.className = 'status-indicator ' + status;
+            reconnectBanner.classList.remove('visible');
+            disconnectedBanner.classList.remove('visible');
+
             switch (status) {
                 case 'connected':
                     statusText.textContent = 'Live';
+                    reconnectAttempts = 0;
                     break;
                 case 'connecting':
                     statusText.textContent = 'Connecting...';
                     break;
+                case 'reconnecting':
+                    statusText.textContent = 'Reconnecting...';
+                    reconnectBanner.classList.add('visible');
+                    break;
                 case 'disconnected':
                     statusText.textContent = 'Disconnected';
+                    disconnectedBanner.classList.add('visible');
                     break;
             }
         }
+
+        async function manualReconnect() {
+            if (!currentRoomCode || !connection) return;
+            updateConnectionStatus('reconnecting');
+            try {
+                await connection.start();
+                await connection.invoke('JoinRoom', currentRoomCode);
+                updateConnectionStatus('connected');
+            } catch (error) {
+                console.error('Manual reconnect failed:', error);
+                updateConnectionStatus('disconnected');
+            }
+        }
+
+        document.getElementById('retry-btn').addEventListener('click', manualReconnect);
 
         function showPollClosed() {
             isPollClosed = true;
@@ -535,28 +642,55 @@
             return div.innerHTML;
         }
 
+        async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(timeoutId);
+                return response;
+            } catch (error) {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    throw new Error('Request timed out. Please try again.');
+                }
+                throw error;
+            }
+        }
+
         async function fetchPoll(roomCode) {
             try {
-                const response = await fetch(`/api/polls/${roomCode}`);
+                const response = await fetchWithTimeout(`/api/polls/${roomCode}`);
                 if (!response.ok) {
                     if (response.status === 404) {
                         showError('Poll not found. Please check the room code.');
                     } else {
-                        showError('Unable to load poll. Please try again.');
+                        const data = await response.json().catch(() => ({}));
+                        showError(data.message || 'Unable to load poll. Please try again.');
                     }
                     return null;
                 }
                 return await response.json();
             } catch (error) {
-                showError('Network error. Please check your connection.');
+                showError(error.message || 'Network error. Please check your connection.');
                 return null;
             }
         }
 
         async function initializeSignalR(roomCode) {
+            currentRoomCode = roomCode;
+
             connection = new signalR.HubConnectionBuilder()
                 .withUrl('/hubs/poll')
-                .withAutomaticReconnect()
+                .withAutomaticReconnect({
+                    nextRetryDelayInMilliseconds: retryContext => {
+                        reconnectAttempts = retryContext.previousRetryCount + 1;
+                        if (reconnectAttempts > maxReconnectAttempts) {
+                            return null;
+                        }
+                        return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 30000);
+                    }
+                })
                 .build();
 
             connection.on('VoteUpdated', (payload) => {
@@ -571,16 +705,19 @@
                 }
             });
 
-            connection.onreconnecting(() => {
-                updateConnectionStatus('connecting');
+            connection.onreconnecting((error) => {
+                console.log('SignalR reconnecting:', error);
+                updateConnectionStatus('reconnecting');
             });
 
-            connection.onreconnected(() => {
+            connection.onreconnected((connectionId) => {
+                console.log('SignalR reconnected:', connectionId);
                 updateConnectionStatus('connected');
                 connection.invoke('JoinRoom', roomCode).catch(console.error);
             });
 
-            connection.onclose(() => {
+            connection.onclose((error) => {
+                console.log('SignalR connection closed:', error);
                 updateConnectionStatus('disconnected');
             });
 

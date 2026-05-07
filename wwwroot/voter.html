@@ -95,6 +95,27 @@
             transform: none;
         }
 
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .loading-spinner.dark {
+            border-color: rgba(0, 0, 0, 0.1);
+            border-top-color: #667eea;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         .error-message {
             background: #fff3f3;
             border: 1px solid #ffcccc;
@@ -480,38 +501,67 @@
             alreadyVotedContainer.style.display = 'block';
         }
 
-        function setOptionButtonsDisabled(disabled) {
+        async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(timeoutId);
+                return response;
+            } catch (error) {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    throw new Error('Request timed out. Please try again.');
+                }
+                throw error;
+            }
+        }
+
+        function setButtonLoading(button, loading, loadingText, normalText) {
+            button.disabled = loading;
+            if (loading) {
+                button.innerHTML = `<span class="loading-spinner"></span>${loadingText}`;
+            } else {
+                button.textContent = normalText;
+            }
+        }
+
+        function setOptionButtonsDisabled(disabled, loadingOptionId = null) {
             const buttons = document.querySelectorAll('.option-btn');
             buttons.forEach(btn => {
                 btn.disabled = disabled;
+                if (disabled && btn.dataset.optionId === loadingOptionId) {
+                    const text = btn.textContent;
+                    btn.innerHTML = `<span class="loading-spinner dark"></span>${text}`;
+                }
             });
         }
 
         async function joinPoll(roomCode) {
             try {
-                const response = await fetch(`/api/polls/${roomCode}`);
+                const response = await fetchWithTimeout(`/api/polls/${roomCode}`);
                 const data = await response.json();
 
                 if (!response.ok) {
                     if (response.status === 404) {
                         showError('Poll not found. Please check the room code and try again.');
                     } else {
-                        showError(data.error || 'Unable to join poll. Please try again.');
+                        showError(data.message || data.error || 'Unable to join poll. Please try again.');
                     }
                     return;
                 }
 
                 showPoll(data);
             } catch (error) {
-                showError('Network error. Please check your connection and try again.');
+                showError(error.message || 'Network error. Please check your connection and try again.');
             }
         }
 
         async function castVote(option) {
-            setOptionButtonsDisabled(true);
+            setOptionButtonsDisabled(true, option.id);
 
             try {
-                const response = await fetch(`/api/polls/${currentPoll.roomCode}/vote`, {
+                const response = await fetchWithTimeout(`/api/polls/${currentPoll.roomCode}/vote`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -525,7 +575,7 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    setOptionButtonsDisabled(false);
+                    showPoll(currentPoll);
                     if (response.status === 404) {
                         showError('Poll not found. It may have been closed.');
                         showJoinForm();
@@ -534,15 +584,15 @@
                     } else if (response.status === 410) {
                         showError('This poll has been closed and is no longer accepting votes.');
                     } else {
-                        showError(data.error || 'Unable to submit vote. Please try again.');
+                        showError(data.message || data.error || 'Unable to submit vote. Please try again.');
                     }
                     return;
                 }
 
                 showConfirmation(option.text);
             } catch (error) {
-                setOptionButtonsDisabled(false);
-                showError('Network error. Please check your connection and try again.');
+                showPoll(currentPoll);
+                showError(error.message || 'Network error. Please check your connection and try again.');
             }
         }
 
@@ -562,13 +612,11 @@
                 return;
             }
 
-            joinBtn.disabled = true;
-            joinBtn.textContent = 'Joining...';
+            setButtonLoading(joinBtn, true, 'Joining...', 'Join Poll');
 
             await joinPoll(roomCode);
 
-            joinBtn.disabled = false;
-            joinBtn.textContent = 'Join Poll';
+            setButtonLoading(joinBtn, false, 'Joining...', 'Join Poll');
         });
 
         voteAgainBtn.addEventListener('click', showJoinForm);
